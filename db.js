@@ -1,4 +1,3 @@
-// db.js - mysql connection pool
 const mysql = require("mysql2/promise");
 require("dotenv").config();
 
@@ -11,9 +10,9 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 10000,
-  keepAliveInitialDelay: 0,
   enableKeepAlive: true,
 });
+
+setInterval(() => pool.query("SELECT 1").catch(() => {}), 300000);
 
 module.exports = pool;
