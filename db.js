@@ -1,47 +1,38 @@
 // db.js
-const mysql = require("mysql2/promise");
-require("dotenv").config();
+const mysql = require("mysql2");
+const dotenv = require("dotenv");
+dotenv.config();
 
-let pool;
+let connection;
 
-function createPool() {
-  pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
+function connectDB() {
+  connection = mysql.createConnection({
+    host: process.env.DB_HOST || "localhost",
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "school_management",
   });
-  console.log("✅ MySQL pool created");
-}
 
-createPool();
-
-// Idle ping every 5 minutes to keep connection alive
-setInterval(async () => {
-  try {
-    await pool.query("SELECT 1");
-  } catch (err) {
-    console.error("Ping failed, reconnecting...", err.code);
-    createPool();
-  }
-}, 5 * 60 * 1000);
-
-// Simple query wrapper
-async function query(sql, params) {
-  try {
-    return await pool.execute(sql, params);
-  } catch (err) {
-    if (err.code === "PROTOCOL_CONNECTION_LOST") {
-      console.log("🔄 Connection lost, reconnecting...");
-      createPool();
-      return await pool.execute(sql, params);
+  connection.connect((err) => {
+    if (err) {
+      console.error("❌ DB connection error:", err);
+      setTimeout(connectDB, 2000); // retry
+    } else {
+      console.log("✅ MySQL connected");
     }
-    throw err;
-  }
+  });
+
+  connection.on("error", (err) => {
+    console.error("⚠️ DB error", err);
+    if (err.code === "PROTOCOL_CONNECTION_LOST") {
+      connectDB(); // reconnect
+    } else {
+      throw err;
+    }
+  });
 }
 
-module.exports = { query };
+connectDB();
+
+module.exports = connection;
